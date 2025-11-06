@@ -109,7 +109,7 @@ x.y.z.w:3389  ──► 200.100.50.10:3389 ──► 192.168.0.10:3389
 ## 5) Atividade 2 — DNAT/Port Forwarding no Emulador TP-Link AC1750
 
 ### 5.1 O que você deve fazer
-1. Acesse o **Emulador AC1750** (conforme instruções do professor).  
+1. Acesse o [**Emulador AC1750**](https://emulator.tp-link.com/Archer_C7/Index.htm).  
 2. Localize a opção **NAT** e verifique se está **habilitada**.  
    - **Print (1):** capture a tela que comprova a configuração.
 
