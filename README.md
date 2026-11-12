@@ -86,7 +86,7 @@ x.y.z.w:3389  ──► 200.100.50.10:3389 ──► 192.168.0.10:3389
    - **curl:** no CMD ou PowerShell, execute este comando e, assim que ele terminar, execute **imediatamente** o comando `netstat` do passo 2. A URL mantém o nome do site para preservar HTTPS e a validação do certificado; `--resolve` fixa a conexão no IPv4 que você anotou no passo 1, mesmo que a resolução normal escolha outro:
 
      ```text
-     curl.exe -4 --http1.1 --resolve "nat.aulasrede.com.br:443:203.0.113.80" -i https://nat.aulasrede.com.br/api/getIpInfo
+     curl.exe -4  -i https://nat.aulasrede.com.br/api/getIpInfo
      ```
 
      Confirme o status HTTP **200** e o cabeçalho `Content-Type: text/plain; charset=utf-8`. A resposta contém os campos de IP e porta, cada um em uma linha; um campo indisponível aparece como `N/A`, sem mensagem nem timestamp. Exemplo (valores ilustrativos):
