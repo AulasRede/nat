@@ -57,7 +57,7 @@ x.y.z.w:3389  ──► 200.100.50.10:3389 ──► 192.168.0.10:3389
 
 ## 3) Pré-requisitos e materiais
 - Computador com acesso à Internet e navegador.
-- Computador Windows com o **Windows PowerShell** e os comandos `ping`, `netstat`, `findstr` e `curl.exe` disponíveis. A alternativa com navegador requer acesso ao site pelo navegador.
+- Computador Windows com o **Prompt de Comando (CMD)** ou **Windows PowerShell** e os comandos `ping`, `netstat` e `findstr` disponíveis. Para a alternativa curl, também é necessário `curl.exe`; a alternativa navegador requer acesso ao site pelo navegador.
 - Emulador de roteador **TP-Link AC1750** (fornecido no enunciado/orientação da aula).
 
 ---
@@ -65,41 +65,53 @@ x.y.z.w:3389  ──► 200.100.50.10:3389 ──► 192.168.0.10:3389
 ## 4) Atividade 1 — Observando a Tradução NAT (Saída)
 
 ### 4.1 O que você deve fazer
-1. Abra uma janela do **Windows PowerShell** e descubra o IPv4 do servidor:
+1. Abra o CMD ou o Windows PowerShell e descubra o IPv4 do servidor:
 
-   ```powershell
+   ```text
    ping -4 nat.aulasrede.com.br
    ```
 
    Anote o endereço IPv4 entre colchetes na primeira linha (por exemplo, `203.0.113.80`). Mesmo que o ping não receba resposta ou indique que o destino está inacessível, o endereço resolvido entre colchetes ainda pode aparecer.
 
-2. Na mesma janela do PowerShell, inicie o monitoramento **antes** de abrir o site. No comando abaixo, substitua `203.0.113.80` pelo IPv4 anotado no passo 1:
+   > **ATENÇÃO — substitua todos os IPs de exemplo:** antes de executar os comandos, troque `203.0.113.80` pelo IPv4 real que você anotou com `ping -4`. Faça isso tanto no filtro do monitoramento quanto no argumento `--resolve` do curl. Não copie o IP ilustrativo sem substituí-lo.
 
-   ```powershell
-   while ($true) {
-       netstat -ano -p tcp | findstr /C:"203.0.113.80:443"
-       Start-Sleep -Seconds 1
-   }
-   ```
+2. Na mesma janela, inicie o monitoramento **antes** de abrir o site. Escolha o comando correspondente ao ambiente que está usando e deixe-o rodando:
 
-   Deixe essa janela aberta. O laço executa uma consulta `netstat` por vez, filtra sua saída e aguarda um segundo antes de repetir; assim, cada amostra filtrada aparece durante a execução. Mostra somente as linhas que contêm o IP do servidor e a porta HTTPS `443`. É normal não aparecer nada antes de acessar o site.
+   - **CMD (Prompt de Comando):**
 
-3. **Enquanto o monitoramento continua**, gere a conexão em uma segunda janela ou no navegador, escolhendo **uma** destas alternativas:
-   - **Navegador:** acesse **https://nat.aulasrede.com.br**. A página mostra o IP público e a porta de origem após a tradução pelo NAT (PAT/NAPT).
-   - **curl:** em uma segunda janela do PowerShell, execute o comando abaixo, substituindo `203.0.113.80` pelo IPv4 anotado no passo 1:
+     ```cmd
+     for /L %i in (1,1,2147483647) do @(netstat -ano -p tcp | findstr /C:203.0.113.80:443 & timeout /t 1 >nul)
+     ```
+
+     No CMD, use `%i` como mostrado; se salvar o comando em um arquivo `.bat`, escreva `%%i`.
+
+   - **Windows PowerShell:**
 
      ```powershell
+     while ($true) {
+         netstat -ano -p tcp | findstr /C:"203.0.113.80:443"
+         Start-Sleep -Seconds 1
+     }
+     ```
+
+   Os dois comandos consultam o `netstat`, filtram as linhas pelo IPv4 e pela porta HTTPS `443` e repetem a consulta aproximadamente a cada segundo. É normal não aparecer nada antes de acessar o site. Não feche essa janela.
+
+3. **Enquanto o monitoramento continua**, gere a conexão, escolhendo **uma** destas alternativas:
+   - **Navegador:** acesse **https://nat.aulasrede.com.br**. A página mostra o IP público e a porta de origem após a tradução pelo NAT (PAT/NAPT).
+   - **curl:** abra uma segunda janela do CMD ou do PowerShell e execute este comando. A URL mantém o nome do site para preservar HTTPS e a validação do certificado; `--resolve` fixa a conexão no IPv4 que você anotou no passo 1, mesmo que a resolução normal escolha outro:
+
+     ```text
      curl.exe -4 --http1.1 --resolve "nat.aulasrede.com.br:443:203.0.113.80" -i https://nat.aulasrede.com.br/api/getIpInfo
      ```
 
-     `--resolve` direciona esta conexão para o IPv4 anotado, mesmo que a resolução normal do curl escolha outro endereço. A URL permanece com o nome do site, preservando HTTPS e a validação do certificado. Confirme o status HTTP **200** e o cabeçalho `Content-Type: text/plain; charset=utf-8`. A resposta contém os campos de IP e porta, cada um em uma linha; um campo indisponível aparece como `N/A`, sem mensagem nem timestamp. Exemplo (valores ilustrativos):
+     Confirme o status HTTP **200** e o cabeçalho `Content-Type: text/plain; charset=utf-8`. A resposta contém os campos de IP e porta, cada um em uma linha; um campo indisponível aparece como `N/A`, sem mensagem nem timestamp. Exemplo (valores ilustrativos):
 
      ```text
      IP: 203.0.113.42
      Porta: 54321
      ```
 
-4. Observe a saída na primeira janela. Como `findstr` mostra somente a linha correspondente, o cabeçalho original do `netstat` não aparece. Leia cada linha pela posição dos campos; por exemplo:
+4. Observe a saída na janela do monitoramento. Como `findstr` mostra somente a linha correspondente, o cabeçalho original do `netstat` não aparece. Leia cada linha pela posição dos campos; por exemplo:
 
    ```text
    TCP    192.168.1.25:50123    203.0.113.80:443    ESTABLISHED    1234
@@ -109,13 +121,13 @@ x.y.z.w:3389  ──► 200.100.50.10:3389 ──► 192.168.0.10:3389
 
    `ESTABLISHED` indica uma conexão ativa; `TIME_WAIT` indica uma conexão fechada recentemente, ainda visível no sistema. Outros estados de encerramento, como `FIN_WAIT_1`, também podem aparecer; o PID pode ser `0` em algumas linhas. Várias linhas podem corresponder a conexões distintas, então não associe uma delas à porta pública sem evidência suficiente. Uma resposta do endpoint com campo `N/A` deve ser registrada como exibida; não invente um valor para completar a tabela.
 
-   Uma página pode abrir várias conexões, e o navegador pode escolher outro IP ou usar outro protocolo. Portanto, uma linha do `netstat` não identifica necessariamente, de forma inequívoca, a conexão exibida na página. A opção curl acima força IPv4 e HTTP/1.1 para facilitar a comparação com o filtro TCP. Mesmo com o monitoramento ativo, uma conexão muito curta pode não coincidir com uma amostra; se necessário, repita o acesso enquanto o laço continua rodando.
+   Uma página pode abrir várias conexões, e o navegador pode escolher outro IP ou usar outro protocolo. Portanto, uma linha do `netstat` não identifica necessariamente, de forma inequívoca, a conexão exibida na página. A opção curl acima força IPv4 e HTTP/1.1 e, com `--resolve`, usa o mesmo IPv4 anotado para facilitar a comparação com o filtro TCP. Mesmo com o monitoramento ativo, uma conexão muito curta pode não coincidir com uma amostra; se necessário, repita o acesso enquanto o laço continua rodando.
 
-5. Depois de observar ou capturar a saída, volte à primeira janela do PowerShell e pressione **Ctrl+C** para encerrar o monitoramento.
+5. Depois de observar ou capturar a saída, volte à janela do CMD ou PowerShell onde iniciou o monitoramento e pressione **Ctrl+C** para encerrar o laço.
 
 ### 4.2 O que você deve entregar
 - **Print 1 — socket externo:** escolha uma alternativa: tela do site **nat.aulasrede.com.br** mostrando o IP/porta após o NAT **ou** saída do `curl.exe` mostrando a resposta com IP/porta.
-- **Print 2 — socket local:** captura da primeira janela do PowerShell enquanto o monitoramento está ativo, mostrando a linha correspondente do `netstat`. Se houver várias linhas, inclua-as sem presumir que uma única conexão foi identificada com certeza.
+- **Print 2 — socket local:** captura da janela do CMD ou PowerShell enquanto o monitoramento está ativo, mostrando a linha correspondente do `netstat`. Se houver várias linhas, inclua-as sem presumir que uma única conexão foi identificada com certeza.
 - **Tabela das associações NAT**, seguindo o modelo a seguir:
 
 #### Modelo de Tabela – Associações NAT
@@ -166,7 +178,7 @@ As recomendações abaixo são para uso em um roteador real; não são etapas ad
 ## 6) Checklist de entrega
 Reúna **todas as imagens e a tabela** em **um único documento Word ou PDF** e envie esse documento pelo Teams.
 - [ ] **Atividade 1 – Print 1:** site no navegador **ou** saída do `curl.exe`, mostrando o IP/porta após NAT.
-- [ ] **Atividade 1 – Print 2:** janela do PowerShell com o monitoramento contínuo e a saída do `netstat` filtrada pelo IP do servidor.
+- [ ] **Atividade 1 – Print 2:** janela do CMD ou PowerShell com o monitoramento contínuo e a saída do `netstat` filtrada pelo IP do servidor.
 - [ ] **Atividade 1 – Tabela** de associações NAT (modelo acima).
 - [ ] **Atividade 2 – Print (1)**: NAT habilitado no emulador AC1750.  
 - [ ] **Atividade 2 – Print (2)**: regra de DNAT/Port Forwarding para RDP.
@@ -174,7 +186,7 @@ Reúna **todas as imagens e a tabela** em **um único documento Word ou PDF** e 
 ---
 
 ## 7) Dicas de Troubleshooting
-- **Sem saída no monitoramento?** Confira se substituiu o filtro pelo IPv4 do `ping -4` e se o monitoramento continua aberto; atualize a página ou repita a alternativa curl do passo 3 enquanto ele roda. Essa alternativa usa `--resolve` para conectar ao mesmo IPv4 anotado no ping. Uma conexão curta pode não coincidir com uma amostra. O navegador pode usar outro IP ou HTTP/3 (UDP), que não aparece no filtro TCP. Se aparecerem várias linhas, não presuma que uma delas corresponde inequivocamente à porta pública observada.
+- **Sem saída no monitoramento?** Confira se substituiu o IP nos exemplos pelo IPv4 do `ping -4` e se o laço continua aberto; atualize a página ou repita a alternativa curl do passo 3 enquanto ele roda. O curl usa `--resolve` para conectar ao mesmo IPv4 anotado no ping. Uma conexão curta pode não coincidir com uma amostra. O navegador pode usar outro IP ou HTTP/3 (UDP), que não aparece no filtro TCP. Se aparecerem várias linhas, não presuma que uma delas corresponde inequivocamente à porta pública observada.
 - **Portas efêmeras diferentes?** É esperado: o NAT pode escolher portas distintas para cada conexão (PAT).  
 - **Não encontro o IP do servidor?** Execute `ping -4 nat.aulasrede.com.br` e anote o IPv4 exibido entre colchetes.
 - **Acesso externo não funciona em um equipamento real?** As verificações abaixo aplicam-se a um roteador real, não ao emulador desta atividade.
