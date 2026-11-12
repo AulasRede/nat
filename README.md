@@ -57,9 +57,7 @@ x.y.z.w:3389  ──► 200.100.50.10:3389 ──► 192.168.0.10:3389
 
 ## 3) Pré-requisitos e materiais
 - Computador com acesso à Internet e navegador.
-- Terminal/shell com utilitários:
-  - **Windows:** `ping`, `nslookup` (ou `Resolve-DnsName`), `netstat`/`Get-NetTCPConnection`, `findstr`.
-  - **Linux/macOS:** `ping`, `dig`/`nslookup`, `ss`/`netstat`, `grep`.
+- Computador Windows com `ping`, `netstat` e `findstr` disponíveis no Prompt de Comando ou PowerShell. No PowerShell, use `curl.exe` para executar o curl.
 - Emulador de roteador **TP-Link AC1750** (fornecido no enunciado/orientação da aula).
 
 ---
@@ -67,51 +65,34 @@ x.y.z.w:3389  ──► 200.100.50.10:3389 ──► 192.168.0.10:3389
 ## 4) Atividade 1 — Observando a Tradução NAT (Saída)
 
 ### 4.1 O que você deve fazer
-Para consultar as informações do socket, use o site no navegador (passo 1) ou o endpoint com curl (instruções abaixo). Para a entrega, mantenha também o print do site solicitado na seção 4.2.
+1. No Prompt de Comando ou PowerShell, execute `ping nat.aulasrede.com.br` e anote o IP exibido entre colchetes na primeira linha (por exemplo, `[203.0.113.80]`). Esse é o IP de destino a usar no filtro do passo 3. O ping serve aqui para descobrir o IP; a resposta de ping pode ser bloqueada sem impedir que o endereço seja mostrado.
 
-1. Acesse, a partir do seu computador local, o endereço:  
-   **https://nat.aulasrede.com.br**  
-   > A página mostrará o **IP público** da sua conexão e a **porta** após a tradução pelo NAT (PAT/NAPT).
+2. Gere a conexão com o site escolhendo **uma** destas alternativas:
+   - **Navegador:** acesse **https://nat.aulasrede.com.br**. A página mostra o IP público e a porta de origem após a tradução pelo NAT (PAT/NAPT).
+   - **curl:** no terminal, execute `curl.exe -i https://nat.aulasrede.com.br/api/getIpInfo`. A resposta textual contém o IP e a porta, cada um em uma linha. Confirme o status HTTP **200** e o cabeçalho `Content-Type: text/plain; charset=utf-8`.
 
-2. Obtenha o **IP do host** `nat.aulasrede.com.br` (o servidor de destino) usando:
-   - **Windows (CMD/PowerShell):**  
-     - `ping nat.aulasrede.com.br`  
-     - `nslookup nat.aulasrede.com.br`  
-   - **Linux/macOS:**  
-     - `ping -c 1 nat.aulasrede.com.br`  
-     - `dig +short nat.aulasrede.com.br` ou `nslookup nat.aulasrede.com.br`
+   Exemplo de corpo da resposta (os valores são ilustrativos; um campo indisponível aparece como `N/A`):
 
-3. **Liste as conexões** do seu host filtrando pelo IP do servidor (obtido no passo 2):
-   - **Windows (CMD):**  
-     `netstat -a -n | findstr "x.y.z.w"`  
-   - **Windows (PowerShell):**  
-     `Get-NetTCPConnection | Where-Object {$_.RemoteAddress -eq "x.y.z.w"}`
-   - **Linux/macOS:**  
-     `ss -tuna | grep x.y.z.w`  
-     *(ou)* `netstat -tuna | grep x.y.z.w`
+   ```text
+   IP: 203.0.113.42
+   Porta: 54321
+   ```
 
-4. Identifique, nas saídas, o **socket local antes do NAT** (no seu host) e o **socket público após o NAT** (mostrado no site). Observe a **mudança de porta de origem**.
+   A resposta não inclui mensagem nem timestamp.
 
-#### Teste do endpoint com curl
+3. **Imediatamente após carregar a página ou terminar o curl**, liste as conexões TCP filtrando pelo IP anotado no passo 1. A conexão TCP com o site pode ser fechada rapidamente:
 
-Execute no terminal (`curl.exe` no Windows PowerShell):
+   ```cmd
+   netstat -ano -p tcp | findstr "203.0.113.80:443"
+   ```
 
-```sh
-curl -i https://nat.aulasrede.com.br/api/getIpInfo
-```
+   Substitua `203.0.113.80` pelo IP obtido no passo 1. O resultado pode incluir uma entrada `TIME_WAIT`; se não localizar a conexão, repita o acesso ao site ou o curl e execute o comando novamente logo em seguida.
 
-Confirme o status HTTP **200** e o cabeçalho `Content-Type: text/plain; charset=utf-8`. A resposta contém apenas o IP e a porta, cada um em uma linha, com uma quebra de linha após a última:
-
-```text
-IP: 203.0.113.42
-Porta: 54321
-```
-
-Os valores acima são exemplos; um campo indisponível aparece como `N/A`. A resposta não inclui mensagem nem timestamp.
+4. Na saída do `netstat`, identifique o **socket local antes do NAT** na coluna `Local Address` e o destino do servidor na coluna `Foreign Address`. O **socket externo após o NAT** é o IP:porta público mostrado pelo site ou no corpo da resposta do curl.
 
 ### 4.2 O que você deve entregar
-- **Print 1:** tela do site **nat.aulasrede.com.br** mostrando IP/porta **após** o NAT.  
-- **Print 2:** saída do comando de listagem de conexões (netstat/ss) **filtrada** pelo IP do servidor de destino.  
+- **Print 1 — socket externo:** escolha uma alternativa: tela do site **nat.aulasrede.com.br** mostrando o IP/porta após o NAT **ou** saída do `curl.exe` mostrando a resposta com IP/porta.
+- **Print 2 — socket local:** saída do `netstat` filtrada pelo IP do servidor de destino, coletada imediatamente após o acesso ao site ou a execução do curl.
 - **Tabela das associações NAT**, seguindo o modelo a seguir:
 
 #### Modelo de Tabela – Associações NAT
@@ -121,7 +102,7 @@ Os valores acima são exemplos; um campo indisponível aparece como `N/A`. A res
 | 1 | 192.168.0.20:53124 | **200.100.50.10:49152** | x.y.z.w:443 |
 | 2 | 192.168.0.21:60412 | **200.100.50.10:49153** | x.y.z.w:443 |
 
-> **Dica:** o “antes do NAT” é o **socket local** visto pelo seu sistema (LAN); o “após o NAT” é o **socket público** exibido no site.
+> **Dica:** o “antes do NAT” é o **socket local** visto pelo seu sistema (LAN); o “após o NAT” é o **socket público** exibido no site ou no corpo da resposta do curl.
 
 ---
 
@@ -143,7 +124,10 @@ Os valores acima são exemplos; um campo indisponível aparece como `N/A`. A res
 
 4. **Print (2):** capture a tela mostrando a **regra criada**.
 
-### 5.2 Boas práticas (recomendado)
+> **Importante:** o emulador não grava as configurações. Não é necessário salvar para esta atividade; basta registrar as telas solicitadas enquanto a configuração estiver visível.
+
+### 5.2 Boas práticas para equipamentos reais
+As recomendações abaixo são para uso em um roteador real; não são etapas adicionais a configurar no emulador desta atividade.
 - **Reserva de DHCP** para 192.168.0.10 (o IP do host interno não deve mudar).  
 - Alterar a **porta externa** (ex.: 53389 → 3389 interno) pode reduzir varreduras automatizadas.  
 - Aplicar **restrição de origem** (quando disponível) e **senhas fortes/MFA** no serviço de destino.  
@@ -156,20 +140,21 @@ Os valores acima são exemplos; um campo indisponível aparece como `N/A`. A res
 
 ---
 
-## 6) Checklist para  Entrega via TEAMS (Consolidado) 
-- [ ] **Atividade 1 – Print do site** com IP/porta após NAT.  
-- [ ] **Atividade 1 – Print** do netstat/ss filtrando o IP do servidor.  
-- [ ] **Atividade 1 – Tabela** de associações NAT (modelo acima).  
+## 6) Checklist de entrega
+Reúna **todas as imagens e a tabela** em **um único documento Word ou PDF** e envie esse documento pelo Teams.
+- [ ] **Atividade 1 – Print 1:** site no navegador **ou** saída do `curl.exe`, mostrando o IP/porta após NAT.
+- [ ] **Atividade 1 – Print 2:** saída do `netstat` filtrada pelo IP do servidor.
+- [ ] **Atividade 1 – Tabela** de associações NAT (modelo acima).
 - [ ] **Atividade 2 – Print (1)**: NAT habilitado no emulador AC1750.  
 - [ ] **Atividade 2 – Print (2)**: regra de DNAT/Port Forwarding para RDP.
 
 ---
 
 ## 7) Dicas de Troubleshooting
-- **Sem saída no netstat/ss?** Gere tráfego abrindo/atualizando a página do site e rode o comando novamente.  
+- **Sem saída no netstat?** A conexão pode ter fechado antes da coleta. Gere tráfego abrindo/atualizando a página ou executando o `curl.exe` e rode o comando filtrado novamente, imediatamente.
 - **Portas efêmeras diferentes?** É esperado: o NAT pode escolher portas distintas para cada conexão (PAT).  
-- **Não encontro o IP do servidor?** Use `nslookup`/`dig` para resolver `nat.aulasrede.com.br`.  
-- **Acesso externo não funciona (Atividade 2)?**  
+- **Não encontro o IP do servidor?** Execute `ping nat.aulasrede.com.br` e anote o IP exibido entre colchetes.
+- **Acesso externo não funciona em um equipamento real?** As verificações abaixo aplicam-se a um roteador real, não ao emulador desta atividade.
   - Verifique se a **regra está ativa** e se o **serviço RDP está ouvindo** em 192.168.0.10:3389.  
   - Confirme se o **IP público do roteador** é realmente público (não CGNAT).  
   - Cheque **firewall** do host interno e regras do roteador (WAN → LAN).
