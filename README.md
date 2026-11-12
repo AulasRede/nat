@@ -67,6 +67,8 @@ x.y.z.w:3389  ──► 200.100.50.10:3389 ──► 192.168.0.10:3389
 ## 4) Atividade 1 — Observando a Tradução NAT (Saída)
 
 ### 4.1 O que você deve fazer
+Para consultar as informações do socket, use o site no navegador (passo 1) ou o endpoint com curl (instruções abaixo). Para a entrega, mantenha também o print do site solicitado na seção 4.2.
+
 1. Acesse, a partir do seu computador local, o endereço:  
    **https://nat.aulasrede.com.br**  
    > A página mostrará o **IP público** da sua conexão e a **porta** após a tradução pelo NAT (PAT/NAPT).
@@ -89,6 +91,23 @@ x.y.z.w:3389  ──► 200.100.50.10:3389 ──► 192.168.0.10:3389
      *(ou)* `netstat -tuna | grep x.y.z.w`
 
 4. Identifique, nas saídas, o **socket local antes do NAT** (no seu host) e o **socket público após o NAT** (mostrado no site). Observe a **mudança de porta de origem**.
+
+#### Teste do endpoint com curl
+
+Execute no terminal (`curl.exe` no Windows PowerShell):
+
+```sh
+curl -i https://nat.aulasrede.com.br/api/getIpInfo
+```
+
+Confirme o status HTTP **200** e o cabeçalho `Content-Type: text/plain; charset=utf-8`. A resposta contém apenas o IP e a porta, cada um em uma linha, com uma quebra de linha após a última:
+
+```text
+IP: 203.0.113.42
+Porta: 54321
+```
+
+Os valores acima são exemplos; um campo indisponível aparece como `N/A`. A resposta não inclui mensagem nem timestamp.
 
 ### 4.2 O que você deve entregar
 - **Print 1:** tela do site **nat.aulasrede.com.br** mostrando IP/porta **após** o NAT.  
