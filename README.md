@@ -122,7 +122,7 @@ x.y.z.w:3389  ──► 200.100.50.10:3389 ──► 192.168.0.10:3389
 | Associação NAT | Socket antes do NAT (local) | Socket após o NAT (público) | Destino |
 |---|---|---|---|
 | 1 | 192.168.0.20:53124 | **200.100.50.10:49152** | x.y.z.w:443 |
-| 2 | 192.168.0.21:60412 | **200.100.50.10:49153** | x.y.z.w:443 |
+
 
 > **Dica:** o “antes do NAT” é o **socket local** visto pelo seu sistema (LAN); o “após o NAT” é o **socket público** exibido no site ou no corpo da resposta do curl.
 
